@@ -15,7 +15,6 @@ class Program
         while (!endApp)
         {
             Console.WriteLine("Main Menu:");
-            Console.WriteLine("\t0 - Close Application");
             Console.WriteLine("\t1 - View habit list");
             Console.WriteLine("\t2 - View habit entries");
             Console.WriteLine("\t3 - View all information");
@@ -24,6 +23,7 @@ class Program
             Console.WriteLine("\t6 - Update habit entry");
             Console.WriteLine("\t7 - Delete habit");
             Console.WriteLine("\t8 - Delete habit entries");
+            Console.WriteLine("\t0 - Close Application");
 
             string? option = Console.ReadLine();
 
@@ -81,7 +81,7 @@ class Program
             habitIds[i] = id;
         }
 
-        int initialFillerAmount = 100;
+        int initialFillerAmount = 10;
         for(int i = 0; i < initialFillerAmount; i++)
         {
             DateOnly randomDate = start.AddDays(rng.Next(range + 1));
@@ -118,8 +118,7 @@ class Program
         List<(int Id, string Name)> habits = DatabaseManager.GetHabits();
         for (int i = 0; i < habits.Count; i++)
         {
-            Console.WriteLine($"{i} - {habits[i].Name}");
-
+            Console.WriteLine($"\t{i} - {habits[i].Name}");
         }
         int habitId = 0;
         string habitName = "";
