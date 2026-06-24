@@ -10,55 +10,55 @@ As this is a console application you just need to input the option you want and 
 
 ### Main Menu
 
-![Main menu image](Habit Tracker/docs/images/main_menu.png)
+![Main menu image](Habit%20Tracker/docs/images/main_menu.png)
 
 On starting the program you get presented all the options available.
 
 #### View habit list
 
-![View habit list image](Habit Tracker/docs/images/view_habit_list.png)
+![View habit list image](Habit%20Tracker/docs/images/view_habit_list.png)
 
 Shows all the habits saved you are tracking.
 
 #### View habit entries
 
-![View habit entries image](Habit Tracker/docs/images/view_habit_entries.png)
+![View habit entries image](Habit%20Tracker/docs/images/view_habit_entries.png)
 
 Shows every entry of every habit.
 
 #### View all information
 
-![View all information image](Habit Tracker/docs/images/view_all_information.png)
+![View all information image](Habit%20Tracker/docs/images/view_all_information.png)
 
 Shows all the habits and their total amount and all the habit entries.
 
 #### Create new habit
 
-![Create new habit image](Habit Tracker/docs/images/create_new_habit.png)
+![Create new habit image](Habit%20Tracker/docs/images/create_new_habit.png)
 
 Write the name for the new habit (you can't repeat names).
 
 #### Insert habit entry
 
-![Insert habit entry image](Habit Tracker/docs/images/create_new_habit.png)
+![Insert habit entry image](Habit%20Tracker/docs/images/create_new_habit.png)
 
 Choose a habit then input a date in "yyyy-MM-dd" format and the number of ocurrences in that day.
 
 #### Update habit entry
 
-![Update habit entry image](Habit Tracker/docs/images/update_habit_entry.png)
+![Update habit entry image](Habit%20Tracker/docs/images/update_habit_entry.png)
 
 Choose a habit then an entry to update its date and/or amount.
 
 #### Delete habit
 
-![Delete habit image](Habit Tracker/docs/images/delete_habit.png)
+![Delete habit image](Habit%20Tracker/docs/images/delete_habit.png)
 
 Delete a habit and all its entries.
 
 #### Delete habit entries
 
-![Delete habit entries image](Habit Tracker/docs/images/delete_habit_entries.png)
+![Delete habit entries image](Habit%20Tracker/docs/images/delete_habit_entries.png)
 
 Delete one or all habit entries of a specific habit.
 
