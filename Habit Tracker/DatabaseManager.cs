@@ -36,7 +36,7 @@ namespace Habit_Tracker
             return string.Join(", ", parts);
         }
 
-        public static void ExecuteNonQuery(SqliteConnection connection, string sql, (string, string)[]? parameters = null)
+        public static void ExecuteNonQuery(SqliteConnection connection, string sql, (string, object)[]? parameters = null)
         {
             try
             {
@@ -49,8 +49,8 @@ namespace Habit_Tracker
                         command.Parameters.AddWithValue(parameter.Item1, parameter.Item2);
                     }
                 }
+                Logger.Log($"Executing command: {command.CommandText} | Parameters: {FormatParameters(command.Parameters)}");
                 command.ExecuteNonQuery();
-                Logger.Log($"Executed command: {command.CommandText} | Parameters: {FormatParameters(command.Parameters)}");
             }
             catch (Exception e)
             {
@@ -59,7 +59,31 @@ namespace Habit_Tracker
             }
         }
 
-        public static SqliteDataReader GetReader(SqliteConnection connection, string sql, (string, string)[]? parameters = null)
+        public static int ExecuteScalar(SqliteConnection connection, string sql, (string, object)[]? parameters = null)
+        {
+            try
+            {
+                using SqliteCommand command = connection.CreateCommand();
+                command.CommandText = sql;
+                if (parameters != null)
+                {
+                    foreach (var parameter in parameters)
+                    {
+                        command.Parameters.AddWithValue(parameter.Item1, parameter.Item2);
+                    }
+                }
+                Logger.Log($"Executing: {command.CommandText} | Parameters: {FormatParameters(command.Parameters)}");
+                return Convert.ToInt32(command.ExecuteScalar());
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"Error: {e.Message}");
+                throw;
+            }
+        }
+
+
+        public static SqliteDataReader GetReader(SqliteConnection connection, string sql, (string, object)[]? parameters = null)
         {
             SqliteCommand command = connection.CreateCommand();
             try
@@ -72,8 +96,8 @@ namespace Habit_Tracker
                         command.Parameters.AddWithValue(parameter.Item1, parameter.Item2);
                     }
                 }
+                Logger.Log($"Executing command: {command.CommandText}");
                 SqliteDataReader reader = command.ExecuteReader();
-                Logger.Log($"Executed command: {command.CommandText}");
                 return reader;
             }
             catch (Exception e)
@@ -84,7 +108,7 @@ namespace Habit_Tracker
             }
         }
 
-        public static DataTable GetTable(string tableName)
+        public static DataTable GetFullTable(string tableName)
         {
             using SqliteConnection connection = OpenConnection();
             using SqliteDataReader reader = GetReader(connection, $"SELECT * FROM {tableName}");
@@ -113,33 +137,86 @@ namespace Habit_Tracker
             );
         }
 
-        public static void CreateHabit(string habitName)
+        public static int CreateHabit(string habitName)
         {
             using SqliteConnection connection = OpenConnection();
-            ExecuteNonQuery(connection, 
-                @"INSERT INTO Habits (Name) VALUES (@name)", 
+            int? result = ExecuteScalar(connection, 
+                @"INSERT INTO Habits (Name) VALUES (@name) RETURNING Id", 
                 [
                     ("@name", habitName)
                 ]
             );
+            return result.Value;
         }
 
-        public static void LogHabit(string habitName, string date, int quantity)
+        public static void InsertHabitEntry(int id, string date, int quantity)
         {
             using SqliteConnection connection = OpenConnection();
             ExecuteNonQuery(connection, 
-                @"INSERT INTO HabitEntries (HabitId, Date, Quantity) VALUES ((SELECT Id FROM Habits WHERE Name = @name), @date, @quantity)", 
+                @"INSERT INTO HabitEntries (HabitId, Date, Quantity) VALUES (@id, @date, @quantity)", 
                 [
-                    ("@name", habitName), 
+                    ("@id", id), 
                     ("@date", date), 
-                    ("@quantity", Math.Max(0, quantity).ToString())
+                    ("@quantity", quantity)
                 ]
             );
         }
 
-        public static List<(int Id, string Name)> GetAllHabitsDataTable()
+        public static void UpdateHabitEntry(int id, string date, int quantity)
         {
-            DataTable table = GetTable("Habits");
+            using SqliteConnection connection = OpenConnection();
+            ExecuteNonQuery(connection,
+                @"UPDATE HabitEntries SET Date = @date, Quantity = @quantity WHERE Id = @id",
+                [
+                    ("@id", id),
+                    ("@date", date),
+                    ("@quantity", quantity)
+                ]
+            );
+        }
+
+        public static void DeleteHabit(int id)
+        {
+            using SqliteConnection connection = OpenConnection();
+            ExecuteNonQuery(connection,
+                @"DELETE FROM HabitEntries WHERE HabitId = @id",
+                [
+                    ("@id", id)
+                ]
+            );
+            ExecuteNonQuery(connection,
+                @"DELETE FROM Habits WHERE Id = @id",
+                [
+                    ("@id", id)
+                ]
+            );
+        }
+
+        public static void DeleteEntry(int id)
+        {
+            using SqliteConnection connection = OpenConnection();
+            ExecuteNonQuery(connection,
+                @"DELETE FROM HabitEntries WHERE Id = @id",
+                [
+                    ("@id", id)
+                ]
+            );
+        }
+
+        public static void DeleteEntriesOfHabit(int habitId)
+        {
+            using SqliteConnection connection = OpenConnection();
+            ExecuteNonQuery(connection,
+                @"DELETE FROM HabitEntries WHERE HabitId = @habitId",
+                [
+                    ("@habitId", habitId)
+                ]
+            );
+        }
+
+        public static List<(int Id, string Name)> GetHabits()
+        {
+            DataTable table = GetFullTable("Habits");
             List<(int Id, string Name)> habits = new();
             const int Id = 0;
             const int Name = 1;
@@ -150,20 +227,47 @@ namespace Habit_Tracker
             return habits;
         }
 
-        public static List<(string Name, string Date, int Quantity)> GetAllHabits()
+        public static List<(int Id, string Name, int Total)> GetHabitTotals()
         {
             using SqliteConnection connection = OpenConnection();
-            using SqliteDataReader reader = GetReader(connection, @"SELECT H.Name, HE.Date, HE.Quantity 
-                                                                    FROM Habits as H 
-                                                                    INNER JOIN HabitEntries as HE 
-                                                                    ON H.Id = HE.HabitId");
-            List<(string Name, string Date, int Quantity)> habits = new();
-            const int Name = 0;
-            const int Date = 1;
-            const int Quantity = 2;
+            using SqliteDataReader reader = GetReader(connection, @"SELECT H.Id, H.Name, COALESCE(SUM(HE.Quantity), 0)
+                                                                    FROM Habits as H
+                                                                    LEFT JOIN HabitEntries as HE
+                                                                    ON HE.HabitId = H.Id
+                                                                    GROUP BY H.Id
+                                                                    ORDER BY H.Id");
+            List<(int Id, string Name, int Total)> habits = new();
+            const int Id = 0;
+            const int Name = 1;
+            const int Total = 2;
             while (reader.Read())
             {
-                habits.Add((reader.GetString(Name), reader.GetString(Date), reader.GetInt32(Quantity)));
+                habits.Add((reader.GetInt32(Id), reader.GetString(Name), reader.GetInt32(Total)));
+            }
+            return habits;
+        }
+
+        public static List<(int Id, string Name, string Date, int Quantity)> GetHabitEntries(int habitId = 0)
+        {
+            using SqliteConnection connection = OpenConnection();
+            using SqliteDataReader reader = GetReader(connection,
+                                                    @"SELECT HE.Id, H.Name, HE.Date, HE.Quantity 
+                                                    FROM Habits as H 
+                                                    INNER JOIN HabitEntries as HE 
+                                                    ON H.Id = HE.HabitId
+                                                    WHERE (@id = 0 OR H.Id = @id)
+                                                    ORDER BY H.Id, HE.Date",
+                                                    [
+                                                        ("@id", habitId)
+                                                    ]);
+            List<(int Id, string Name, string Date, int Quantity)> habits = new();
+            const int Id = 0;
+            const int Name = 1;
+            const int Date = 2;
+            const int Quantity = 3;
+            while (reader.Read())
+            {
+                habits.Add((reader.GetInt32(Id), reader.GetString(Name), reader.GetString(Date), reader.GetInt32(Quantity)));
             }
             return habits;
         }
